@@ -1,0 +1,792 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================================================
+   Agrumea Farm — design tokens
+   ============================================================ */
+:root {
+  /* Brand palette */
+  --color-orange: #e94e1b;
+  --color-border-brand: #762530;
+  --color-white: #fdf3eb;
+  --color-yellow: #f39200;
+  --color-ink: #2b2b4e;
+  --color-plum: #56275f;
+  --color-brown: #752f0b;
+  --color-red: #a31814;
+  --color-cream-dark: #f4e9dd;
+
+  /* Typography */
+  --font-sans: "ivystyle-sans", "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-serif: "ivymode", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  --text-small: 0.875rem;
+  --text-base: 1rem;
+  --text-medium: clamp(1.125rem, calc(1.085rem + 0.165vw), 1.25rem);
+  --text-large: 2rem;
+  --text-hero: clamp(2.65rem, calc(1.359rem + 0.1vw), 1.938rem);
+  --text-display: clamp(2.5rem, calc(1rem + 8vw), 12rem);
+  --line-height-s: 1.2;
+  --line-height-m: 1.3;
+
+  /* Layout */
+  --border-round: 15px;
+  --container-padding: clamp(30px, 2vw, 40px);
+  --grid-columns: 12;
+  --grid-gap-x: clamp(12px, 1.45vw, 30px);
+  --header-pad-y: 24px;
+  --header-brand-width: 108px;
+  --app-height: 100svh;
+  --space-s: 2.5rem;
+  --space-xs: 3.75rem;
+  --space-l: 3rem;
+
+  /* Motion easings */
+  --ease-premium: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Fruit marquee geometry */
+  --fruit-circle-rotation: 0deg;
+  --fruit-marquee-top: 45%;
+  --fruit-marquee-w: 100vw;
+  --fruit-marquee-h: min(560px, 70vh);
+  --fruit-marquee-angle: 4deg;
+  --fruit-item-w: clamp(120px, 24.33vw, 200px);
+  --fruit-item-h: calc(var(--fruit-item-w) * 1.6);
+
+  /* shadcn-compatible tokens */
+  --background: var(--color-white);
+  --foreground: var(--color-border-brand);
+  --card: var(--color-white);
+  --card-foreground: var(--color-border-brand);
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-border-brand);
+  --primary: var(--color-orange);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-cream-dark);
+  --secondary-foreground: var(--color-border-brand);
+  --muted: var(--color-cream-dark);
+  --muted-foreground: var(--color-brown);
+  --accent: var(--color-yellow);
+  --accent-foreground: var(--color-white);
+  --destructive: var(--color-red);
+  --border: color-mix(in srgb, var(--color-border-brand) 20%, transparent);
+  --input: color-mix(in srgb, var(--color-border-brand) 25%, transparent);
+  --ring: var(--color-orange);
+
+  /* Redesign tokens */
+  --color-rust: #b4501e;
+  --color-terracotta: #7e332b;
+  --color-terracotta-top: #9c4a3c;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --header-pad-y: 30px;
+    --header-brand-width: 135px;
+    --fruit-marquee-top: 55%;
+    --fruit-marquee-h: 560px;
+    --text-hero: clamp(4.1rem, calc(2.65rem + 5.95vw), 8rem);
+    --text-display: clamp(4rem, calc(2.9rem + 11vw), 14rem);
+    --space-l: 6.25rem;
+    --line-height-s: 1;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-heading: var(--font-serif);
+  --color-orange: var(--color-orange);
+  --color-brand-border: var(--color-border-brand);
+  --color-cream: var(--color-white);
+  --color-cream-dark: var(--color-cream-dark);
+  --color-yellow-brand: var(--color-yellow);
+  --color-ink: var(--color-ink);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--color-white);
+    color: var(--color-border-brand);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ============================================================
+   Component styles
+   ============================================================ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  padding: var(--header-pad-y) var(--container-padding);
+  color: var(--color-white);
+  pointer-events: none;
+}
+.site-header__bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  pointer-events: auto;
+}
+.site-lang-switcher {
+  display: flex;
+  gap: 0.5rem;
+  font-size: var(--text-small);
+  letter-spacing: 0.08em;
+}
+.site-lang-switcher__item {
+  text-decoration: none;
+  color: inherit;
+  opacity: 0.55;
+  transition: opacity 0.3s var(--ease-soft);
+}
+.site-lang-switcher__item:hover { opacity: 1; }
+.site-lang-switcher__item.is-active { opacity: 1; font-weight: 600; }
+
+.site-header__brand { width: var(--header-brand-width); }
+.site-header__brand img { width: 100%; height: auto; display: block; }
+
+.site-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  letter-spacing: 0.08em;
+  padding: 0;
+}
+.site-menu-toggle__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  transition: background 0.3s var(--ease-soft), color 0.3s var(--ease-soft);
+}
+.site-menu-toggle:hover .site-menu-toggle__pill {
+  background: var(--color-white);
+  color: var(--color-border-brand);
+}
+.site-menu-toggle__diamond {
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+  transform: rotate(45deg);
+  display: inline-block;
+}
+
+/* ---------- Hero fruit slider（基础 / 暗色舞台兼容） ---------- */
+.fruit-slider {
+  background: #532a26 url("/assets/agrumea/hero-stage-bg.jpg") center 68% / cover no-repeat;
+  height: var(--app-height);
+  min-height: var(--app-height);
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.fruit-slider__overlay {
+  display: grid;
+  inset: 0;
+  padding-bottom: clamp(48px, 8vw, 106px);
+  place-items: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+  align-content: end;
+}
+.fruit-slider__prompt {
+  bottom: 30px;
+  color: var(--color-white);
+  font-family: var(--font-serif);
+  font-size: calc(var(--text-small) - 1px);
+  letter-spacing: 0.1em;
+  position: absolute;
+  text-align: center;
+  text-transform: uppercase;
+  width: 100%;
+  animation: prompt-pulse 2.6s ease-in-out infinite;
+  opacity: 1;
+  transform: none;
+}
+@keyframes prompt-pulse {
+  0%, 100% { opacity: 0.55; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-4px); }
+}
+.fruit-slider__wrapper {
+  cursor: grab;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  touch-action: none;
+  z-index: 2;
+}
+.fruit-slider__wrapper:active { cursor: grabbing; }
+.fruit-slider__marquee {
+  height: var(--fruit-marquee-h);
+  left: 50%;
+  position: absolute;
+  top: var(--fruit-marquee-top);
+  transform: translate(-50%, -50%) rotate(var(--fruit-marquee-angle));
+  width: var(--fruit-marquee-w);
+}
+.fruit-slider__track {
+  height: 100%;
+  position: relative;
+  width: 100%;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.fruit-slider.is-hydrated .fruit-slider__track { display: block; }
+.fruit-slider__item {
+  cursor: pointer;
+  height: var(--fruit-item-h);
+  width: var(--fruit-item-w);
+  left: 0;
+  margin-top: calc(var(--fruit-item-h) / -2);
+  pointer-events: auto;
+  position: relative;
+  top: 50%;
+  will-change: transform, opacity, filter;
+  color: inherit;
+  text-decoration: none;
+  --fruit-turn-x: 0deg;
+  --fruit-turn-y: 0deg;
+  --fruit-turn-z: 0deg;
+  --fruit-depth: 0px;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+.fruit-slider.is-hydrated .fruit-slider__item {
+  margin-top: calc(var(--fruit-item-h) / -2);
+  position: absolute;
+  top: 50%;
+}
+.fruit-slider__item img.fruit-slider__base,
+.fruit-slider__item canvas.fruit-slider__label {
+  height: 100%;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  width: 100%;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+.fruit-slider.is-hydrated .fruit-slider__item img.fruit-slider__base,
+.fruit-slider.is-hydrated .fruit-slider__item canvas.fruit-slider__label {
+  transform: translateZ(var(--fruit-depth)) rotateX(var(--fruit-turn-x)) rotateY(var(--fruit-turn-y)) rotateZ(var(--fruit-turn-z));
+}
+.fruit-slider__base {
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 26px 34px rgba(22, 7, 7, 0.55));
+}
+.fruit-slider__item::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -6%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(18, 5, 5, 0.45), rgba(18, 5, 5, 0) 72%);
+  filter: blur(8px);
+  z-index: -1;
+  pointer-events: none;
+}
+@media (max-width: 1024px) { .fruit-slider { --fruit-marquee-top: 43%; } }
+@media (max-width: 480px) {
+  .fruit-slider { --fruit-marquee-top: 45%; --fruit-item-w: 24.33vw; --fruit-item-h: 39.13vw; }
+}
+
+.fruit-slider__shape-layer { display: none !important; }
+body:has(.fruit-slider) .site-header__brand img {
+  filter: brightness(0) invert(0.96) sepia(0.3) saturate(1.25) hue-rotate(-10deg);
+}
+
+/* ---------- Full-page nav overlay ---------- */
+.site-full-page-nav {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--color-border-brand);
+  color: var(--color-white);
+  display: grid;
+  place-items: center;
+  clip-path: circle(0% at calc(100% - 60px) 40px);
+  transition: clip-path 0.8s var(--ease-premium);
+  visibility: hidden;
+}
+.site-full-page-nav.is-open {
+  clip-path: circle(150% at calc(100% - 60px) 40px);
+  visibility: visible;
+}
+.fp-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 2vh, 1.5rem);
+  font-family: var(--font-serif);
+}
+.fp-nav__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  line-height: 1.05;
+  transition: color 0.3s var(--ease-soft), letter-spacing 0.3s var(--ease-soft);
+}
+.fp-nav__link:hover, .fp-nav__link.is-active { color: var(--color-yellow); letter-spacing: 0.01em; }
+.fp-nav__marker {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--color-orange);
+  transform: rotate(45deg);
+  margin-right: 0.75rem;
+  vertical-align: middle;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-soft);
+}
+.fp-nav__link:hover .fp-nav__marker { opacity: 1; }
+.fp-nav__secondary {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding-left: clamp(1.5rem, 4vw, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.fp-nav__secondary-link {
+  color: inherit;
+  text-decoration: none;
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  opacity: 0.75;
+  transition: opacity 0.3s var(--ease-soft), color 0.3s var(--ease-soft);
+}
+.fp-nav__secondary-link:hover { opacity: 1; color: var(--color-orange); }
+.fp-nav__arrow { margin-left: 0.5rem; font-size: 0.8em; }
+
+/* ---------- Legal footer ---------- */
+.site-shell__legal {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 30;
+  padding: 1rem var(--container-padding);
+  mix-blend-mode: difference;
+}
+.site-legal__link {
+  color: var(--color-white);
+  text-decoration: none;
+  font-size: var(--text-small);
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.site-legal__link:hover { opacity: 1; text-decoration: underline; }
+
+/* ---------- Pantry page ---------- */
+.pantry-hero {
+  padding: calc(var(--header-pad-y) * 3 + var(--header-brand-width)) var(--container-padding) var(--space-l);
+  text-align: center;
+}
+.pantry-hero__title {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  line-height: var(--line-height-s);
+  color: var(--color-border-brand);
+  margin: 0 0 1rem;
+}
+.pantry-hero__lead {
+  font-size: var(--text-medium);
+  max-width: 46ch;
+  margin: 0 auto;
+  color: var(--color-brown);
+}
+.pantry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: var(--space-s) var(--grid-gap-x);
+  padding: 0 var(--container-padding) var(--space-xl, 8rem);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.product-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 1.5rem 1rem;
+  border-radius: var(--border-round);
+  transition: background 0.35s var(--ease-soft), transform 0.35s var(--ease-soft);
+}
+.product-card:hover { background: var(--color-cream-dark); transform: translateY(-6px); }
+.product-card__image {
+  height: 260px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 24px color-mix(in srgb, var(--color-border-brand) 18%, transparent));
+  transition: transform 0.42s var(--ease-soft);
+}
+.product-card:hover .product-card__image { transform: scale(1.05) rotate(-2deg); }
+.product-card__name {
+  font-family: var(--font-serif);
+  font-size: var(--text-medium);
+  line-height: var(--line-height-m);
+  text-align: center;
+}
+.product-card__cta {
+  font-size: var(--text-small);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-orange);
+}
+
+/* ---------- About / production pages ---------- */
+.story-section { padding: var(--space-xl, 8rem) var(--container-padding); max-width: 1100px; margin: 0 auto; }
+.story-section--tint { background: var(--color-cream-dark); max-width: none; }
+.story-section--tint > .story-inner { max-width: 1100px; margin: 0 auto; }
+.story-kicker { font-size: var(--text-small); letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-orange); margin: 0 0 1rem; }
+.story-title { font-family: var(--font-serif); font-size: var(--text-hero); line-height: var(--line-height-s); margin: 0 0 1.5rem; color: var(--color-border-brand); }
+.story-text { font-size: var(--text-medium); line-height: var(--line-height-m); color: var(--color-brown); max-width: 62ch; }
+.story-text + .story-text { margin-top: 1rem; }
+.story-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-s); margin-top: var(--space-l); }
+.story-stat__value { font-family: var(--font-serif); font-size: clamp(2.5rem, 5vw, 4rem); color: var(--color-orange); line-height: 1; }
+.story-stat__label { font-size: var(--text-small); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.5rem; color: var(--color-brown); }
+
+/* ---------- Contacts ---------- */
+.contact-list { display: flex; flex-direction: column; gap: 1rem; margin-top: var(--space-s); }
+.contact-item { font-size: var(--text-medium); }
+.contact-item a { color: var(--color-orange); text-decoration: none; }
+.contact-item a:hover { text-decoration: underline; }
+
+/* ---------- Shared CTA pill ---------- */
+.cta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: var(--color-orange);
+  color: var(--color-white);
+  border-radius: 999px;
+  min-height: clamp(56px, 6vw, 72px);
+  padding: 0.75rem 2rem;
+  font-size: var(--text-small);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 18px 38px color-mix(in srgb, var(--color-border-brand) 16%, transparent);
+  transition: transform 0.35s var(--ease-soft), background 0.35s var(--ease-soft);
+}
+.cta-pill:hover { background: var(--color-yellow); transform: translateY(-3px); }
+.cta-pill--outline { background: transparent; color: var(--color-orange); border: 1.5px solid currentColor; box-shadow: none; }
+.cta-pill--outline:hover { background: var(--color-orange); color: var(--color-white); }
+
+/* ---------- Experience page ---------- */
+.experience-banner {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: var(--space-xl, 8rem) var(--container-padding);
+  background: radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--color-yellow) 28%, var(--color-white)), var(--color-white) 60%);
+}
+
+/* ---------- WebGL Canvas Layer (FruitSlider 3D) ---------- */
+.fruit-slider__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.fruit-slider.is-boot .fruit-slider__item { visibility: hidden; }
+.fruit-slider.is-boot .fruit-slider__item::after { display: none; }
+.fruit-slider.is-webgl .fruit-slider__marquee { transform: translate(-50%, -50%); }
+
+/* ---------- Light studio stage（旧浅色摄影底图，兼容保留） ---------- */
+.fruit-slider--light {
+  background:
+    url("/assets/agrumea/hero-stage-light.jpg") center 62% / cover no-repeat,
+    radial-gradient(120% 90% at 50% 10%, #f7efdf 0%, #efe5d2 55%, #e6d9c2 100%) #ece2cf;
+  position: relative;
+}
+@media (max-width: 767px) {
+  .fruit-slider--light { background-position: center 70%, center; }
+}
+body:has(.fruit-slider--light) .site-lang-switcher,
+body:has(.fruit-slider--light) .site-menu-toggle {
+  visibility: hidden;
+}
+.fruit-slider--light .fruit-slider__copy { display: none; }
+.fruit-slider--light .fruit-slider__prompt {
+  color: var(--color-rust);
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  opacity: 1;
+}
+.fruit-slider--light .fruit-slider__prompt::after {
+  content: "";
+  display: block;
+  width: 54px;
+  height: 12px;
+  margin: 8px auto 0;
+  border-bottom: 2px solid currentColor;
+  border-radius: 0 0 60% 60% / 0 0 100% 100%;
+  opacity: 0.8;
+}
+
+/* 双行字标 */
+.site-header__wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+  color: inherit;
+  font-family: var(--font-serif);
+  line-height: 1;
+}
+.site-header__wordmark-main { font-size: clamp(26px, 3vw, 40px); letter-spacing: 0.08em; font-weight: 500; }
+.site-header__wordmark-sub { font-size: clamp(18px, 2vw, 26px); font-style: italic; }
+
+body:has(.fruit-slider--light) .site-header { color: var(--color-rust); }
+body:has(.fruit-slider--light) .site-header__brand { width: auto; }
+body:has(.fruit-slider--light) .site-header__brand img { filter: none; }
+body:has(.fruit-slider--light) .site-menu-toggle:hover .site-menu-toggle__pill {
+  background: var(--color-rust);
+  color: var(--color-white);
+}
+body:has(.fruit-slider--light) .site-shell__legal { display: none; }
+
+/* ---------- 接触阴影（DOM multiply，恒印在台座上） ---------- */
+.fruit-slider__shadows { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.fruit-shadow {
+  position: absolute; left: 0; top: 0;
+  width: 200px; height: 60px; margin: -30px 0 0 -100px;
+  border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(58, 20, 14, 0.50) 0%, rgba(58, 20, 14, 0.28) 46%, rgba(58, 20, 14, 0) 76%);
+  mix-blend-mode: multiply;
+  filter: blur(7px);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.fruit-shadow--core {
+  width: 120px; height: 30px; margin: -15px 0 0 -60px;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(38, 12, 9, 0.78) 0%, rgba(38, 12, 9, 0.42) 52%, rgba(38, 12, 9, 0) 80%);
+  filter: blur(3px);
+}
+
+/* ============================================================
+   v6.4 — Nature Stage 自然场景分层 + 环境循环动画（无 Splash）
+   （植物层 left/top/width 由 fruit-slider.tsx 的 layoutPlants()
+     按底图 cover 映射写入 inline，此处只写动画 / 裁切 / origin）
+   ============================================================ */
+.fruit-slider--nature {
+  background: #f5ede3;
+  height: var(--app-height);
+  min-height: var(--app-height);
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+/* 层 0：净版底图 */
+.fruit-slider__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url("/assets/agrumea/hero-nature-bg.jpg") center 62% / cover no-repeat;
+}
+@media (max-width: 767px) {
+  .fruit-slider__bg { background-position: center 70%; }
+}
+
+/* 层 1：棕榈叶影（8–15s 漂移循环） */
+.fruit-slider__palm-shadow {
+  position: absolute;
+  inset: -8% -4% 30% -4%;
+  z-index: 1;
+  pointer-events: none;
+  background: url("/assets/agrumea/shadow-palm.png") left top / 78% auto no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  animation: palm-drift 12s ease-in-out infinite alternate;
+}
+@keyframes palm-drift {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0.46; }
+  50%  { transform: translate3d(1.4%, 0.9%, 0) rotate(0.5deg); opacity: 0.54; }
+  100% { transform: translate3d(-0.8%, 1.4%, 0) rotate(-0.4deg); opacity: 0.48; }
+}
+
+/* 层 2：植物（定位由 JS inline 写入；右箱裁掉 PNG 自带木箱） */
+.fruit-slider__plant-left,
+.fruit-slider__plant-right {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+.fruit-slider__plant-left {
+  transform-origin: 6% 3%;
+  animation: plant-sway-left 6s ease-in-out infinite;
+}
+.fruit-slider__plant-right {
+  transform-origin: 50% 96%;
+  animation: plant-sway-right 7.5s ease-in-out infinite;
+  object-fit: cover;
+  object-position: 50% 0%;
+}
+@keyframes plant-sway-left {
+  0%, 100% { transform: rotate(0deg) translate3d(0, 0, 0); }
+  30%      { transform: rotate(0.7deg) translate3d(0.25%, 0.2%, 0); }
+  70%      { transform: rotate(-0.45deg) translate3d(-0.2%, 0.35%, 0); }
+}
+@keyframes plant-sway-right {
+  0%, 100% { transform: rotate(0deg); }
+  40%      { transform: rotate(-0.5deg); }
+  80%      { transform: rotate(0.35deg); }
+}
+/* 底图已 baked 植物时：隐藏植物层 */
+.fruit-slider--nature.no-plant-layers .fruit-slider__plant-left,
+.fruit-slider--nature.no-plant-layers .fruit-slider__plant-right { display: none; }
+
+/* 层 4：品牌字标（页面加载即淡入） */
+.fruit-slider__brand {
+  position: absolute;
+  top: 5.5%;
+  left: 50%;
+  width: clamp(280px, 32vw, 500px);
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+  animation: brand-enter 0.8s var(--ease-soft) 0.15s forwards;
+}
+@keyframes brand-enter {
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* nature 场景层级修正 */
+.fruit-slider--nature .fruit-slider__shadows { z-index: 2; }
+.fruit-slider--nature .fruit-slider__canvas { z-index: 3; }
+.fruit-slider--nature .fruit-slider__wrapper { z-index: 5; }
+
+/* nature 场景隐藏站点 header 与旧 marquee / overlay */
+body:has(.fruit-slider--nature) .site-header,
+body:has(.fruit-slider--nature) .site-shell__legal { display: none; }
+.fruit-slider--nature .fruit-slider__marquee,
+.fruit-slider--nature .fruit-slider__overlay { display: none !important; }
+
+/* 悬停信息卡片 */
+.fruit-info-card {
+  position: absolute;
+  bottom: 9%;
+  left: 50%;
+  z-index: 6;
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transform: translateX(-50%) translateY(12px);
+  transition: opacity 0.4s var(--ease-soft), transform 0.4s var(--ease-soft);
+}
+.fruit-info-card.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.fruit-info-card__name {
+  font-family: var(--font-serif);
+  font-size: clamp(22px, 2.4vw, 32px);
+  color: #8b3a1f;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+}
+.fruit-info-card__origin {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #a04a2a;
+  opacity: 0.75;
+  margin: 0 0 8px;
+}
+.fruit-info-card__desc {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #752f0b;
+  opacity: 0.85;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* 滚动提示（1.8s 后淡入 + 呼吸） */
+.fruit-slider--nature .fruit-slider__prompt {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  width: auto;
+  z-index: 6;
+  pointer-events: none;
+  color: #8b3a1f;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(-50%);
+  animation:
+    prompt-in 0.6s ease-out 1.8s forwards,
+    prompt-pulse-x 2.6s ease-in-out 2.4s infinite;
+}
+@keyframes prompt-in { to { opacity: 0.8; } }
+@keyframes prompt-pulse-x {
+  0%, 100% { opacity: 0.55; transform: translateX(-50%) translateY(0); }
+  50%      { opacity: 0.95; transform: translateX(-50%) translateY(-3px); }
+}
+
+/* 移动端适配（植物定位走 JS，故此处不再覆盖 plant 尺寸） */
+@media (max-width: 767px) {
+  .fruit-slider__brand { top: 4%; width: 62vw; }
+  .fruit-info-card { bottom: 7%; }
+}
