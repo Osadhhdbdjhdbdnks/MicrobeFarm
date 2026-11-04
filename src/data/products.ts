@@ -3,15 +3,22 @@ export type Product = {
   slug: string;
   fruit: string;
   name: string;
-  origin: string;
+  category: string; // 分类 slug（对应 categories）
   image: string;
   turns: string[];
-  model: string;
+  model: string; // 真 3D 网格（glTF-Binary）
   description: string;
+};
+
+export type Category = {
+  slug: string;
+  label: string;
+  blurb: string;
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** 实际 glb 文件名映射（文件位于 public/assets/agrumea/models/） */
 const MODEL_BY_SLUG: Record<string, string> = {
   durian: "/assets/agrumea/models/durian_the_king_of_fruits.glb",
   papaya: "/assets/agrumea/models/papaya.glb",
@@ -24,27 +31,58 @@ const product = (
   slug: string,
   fruit: string,
   name: string,
-  origin: string,
+  category: string,
   description: string
 ): Product => ({
   slug,
   fruit,
   name,
-  origin,
+  category,
   image: `/assets/agrumea/fruit-${slug}-side.webp`,
-  turns: Array.from({ length: 16 }, (_, i) => `/assets/agrumea/fruit-${slug}-turn-${pad(i)}.webp`),
+  turns: Array.from(
+    { length: 16 },
+    (_, i) => `/assets/agrumea/fruit-${slug}-turn-${pad(i)}.webp`
+  ),
   model: MODEL_BY_SLUG[slug] ?? `/assets/agrumea/models/${slug}.glb`,
   description,
 });
 
-/* 顺序即展示顺序：初始三果 = 百香果 / 榴莲 / 木瓜（对照新设计图） */
-export const products: Product[] = [
-  product("passionfruit", "Passion fruit", "Fresh passion fruit", "Tropical Highlands", "Glossy purple passion fruit with a bright, tangy heart."),
-  product("durian", "Durian", "Fresh durian", "Southeast Asia", "The king of fruits — creamy, complex, unmistakable."),
-  product("papaya", "Papaya", "Fresh papaya", "Sicilian Sun", "Sun-ripened papaya, sweet and silken on the palate."),
-  product("hamimelon", "Hami melon", "Fresh hami melon", "Xinjiang Desert", "Netted hami melon, cool and honeyed."),
-  product("potato", "Potato", "Fresh potato", "Sicilian Earth", "Earthy Sicilian potato, the farm's humble pride."),
+/* ============ 分类（Pantry 页按此分组） ============ */
+export const categories: Category[] = [
+  {
+    slug: "fresh-fruit",
+    label: "Fresh Fruit",
+    blurb: "Sun-ripened harvest from our Sicilian orchards, picked at the perfect moment.",
+  },
+  {
+    slug: "tropical",
+    label: "Tropical Goodness",
+    blurb: "Exotic notes grown with Mediterranean patience and bright, tangy character.",
+  },
+  {
+    slug: "savoury",
+    label: "Savoury",
+    blurb: "Earthy, generous produce — the humble backbone of the island's table.",
+  },
 ];
+
+/* 顺序即展示顺序：初始三果 = 榴莲 / 木瓜 / 哈密瓜（对照设计图构图） */
+export const products: Product[] = [
+  product("durian", "Durian", "Fresh durian", "fresh-fruit", "The king of fruits, 3D-scanned turn by turn."),
+  product("papaya", "Papaya", "Fresh papaya", "fresh-fruit", "Sun-ripened papaya, 3D-scanned turn by turn."),
+  product("hamimelon", "Hami melon", "Fresh hami melon", "fresh-fruit", "Netted hami melon, 3D-scanned turn by turn."),
+  product("potato", "Potato", "Fresh potato", "savoury", "Earthy Sicilian potato, 3D-scanned turn by turn."),
+  product("passionfruit", "Passion fruit", "Fresh passion fruit", "tropical", "Glossy passion fruit, 3D-scanned turn by turn."),
+];
+
+/* ============ 分类 → 商品 映射（Pantry 页直接取用） ============ */
+export const productsByCategory: Record<string, Product[]> = categories.reduce(
+  (acc, c) => {
+    acc[c.slug] = products.filter((p) => p.category === c.slug);
+    return acc;
+  },
+  {} as Record<string, Product[]>
+);
 
 export function findProduct(slug: string): Product | undefined {
   return products.find((p) => p.slug === slug);

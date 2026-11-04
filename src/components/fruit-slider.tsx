@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
@@ -7,33 +8,36 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { products, type Product } from "@/data/products";
 
 /* ============================================================
-   FruitSlider v6.4 — Nature Stage（Splash 已移除）
-   · 分层背景：净版底图 + 棕榈叶影(漂移) + 植物(轻摆, cover 映射定位)
-   · 入场：品牌 0.15s 淡入 → 首模型就绪 +0.8s 水果淡入上移落座
-   · 切换：拖拽/滚轮 → 旧果淡出下沉、新果淡入上移（spring ≈0.6s）
-   · 悬停：放大 2.5% + 停留 260ms 后慢转(4.2s/圈) + 信息卡片
-   · 触屏：按住水果搓转；拖拽空白切换
-   · 接触阴影：DOM 双层 multiply，恒印在陶土台座上
+   FruitSlider v6.10 — Nature Stage + 悬停 Discover 标签
+   · v6.9 全部保留：分层并行加载 / 渐进入场 / DRACO 预热 / preconnect /
+     响应式三果恒定 3 件 / useRouter 跳转 / 植物 cover 映射 / 防闪现
+   · 新增：鼠标悬停水果 → 水果外侧浮现「◆ DISCOVER THE PRODUCT」胶囊，
+     随水果实时跟随、近右缘自动翻左、触屏不显示（帧循环内直写 inline，
+     不经 React state，零重渲染开销）
 ============================================================ */
 
-/* 底图已 baked 植物时改为 false（植物层隐藏，其余动画不变） */
 const SHOW_PLANT_LAYERS = true;
 
 const PX2W = 1 / 100;
 const FOV = 35;
 const WHEEL_SPEED = 1.2, DRAG_SPEED = 1.6, FLING_SPEED = 200, FLING_CLAMP = 3.0;
 const HOVER_BOOST = 1.025;
-const ENTER_DELAY = 800;
+const ENTER_DELAY = 150;
 const LIFT_PX = 46;
+const FIRST_SCREEN_COUNT = 3;
 
-/* 悬停自转 */
 const REV_MS = 4200;
 const SPIN_DPS = 360 / (REV_MS / 1000);
 const TOUCH_SPIN_DEG = 0.45;
 const SPIN_SPRING_STIFF = 60, REST_SNAP_K = 6;
 
-/* 三果落位（屏幕宽度比例） */
-const TRIO_LEFT = 0.26;
+const TRIO_BY_BP = {
+  xs: { n: 0.44, left: 0.06, fadeLo: -0.04, fadeHi: 0.0 },
+  sm: { n: 0.36, left: 0.14, fadeLo: 0.02, fadeHi: 0.06 },
+  md: { n: 0.262, left: 0.26, fadeLo: 0.18, fadeHi: 0.24 },
+};
+let bp = TRIO_BY_BP.md;
+
 const SIZE_BY_SLUG: Record<string, number> = {
   durian: 1.05, dragonfruit: 0.95, papaya: 1.15, hamimelon: 1.0, potato: 0.85, passionfruit: 0.82,
 };
@@ -44,34 +48,27 @@ const POSE_BY_SLUG: Record<string, number> = {
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-/* ============ 台座落地标定（hero-nature-bg.jpg）============
-   陷进台座 → 调小 STAGE_FY_*；悬空 → 调大；步长 0.005 */
 const STAGE_SPAN_X: [number, number] = [0.18, 0.82];
 const STAGE_FY_EDGE = 0.70;
 const STAGE_FY_CENTER = 0.74;
 const GROUND_SINK = 0.035;
-const BG_POS_Y_DESKTOP = 0.62;   // 与 CSS background-position 一致
+const BG_POS_Y_DESKTOP = 0.62;
 const BG_POS_Y_MOBILE = 0.70;
 const MOBILE_BP = 768;
 
-/* ============ 植物层标定（底图宽度/高度比例）============
-   PLANT_LEFT：整张枝叶矩形。
-   PLANT_RIGHT：只渲染 PNG 上部植物（裁掉自带木箱），
-   fy = 植物顶端在底图中的高度比例；对齐底图箱口≈0.48。 */
 const PLANT_LEFT = { fx: -0.020, fy: -0.024, fw: 0.393 };
 const PLANT_RIGHT = { fx: 0.760, fy: 0.192, fw: 0.300 };
-const PNG_RIGHT_ASPECT = 0.825;      // plant-right.png 高/宽
-const PNG_RIGHT_PLANTS_FRAC = 0.654; // 植物部分占 PNG 高度比例（箱口以上）
+const PNG_RIGHT_ASPECT = 0.825;
+const PNG_RIGHT_PLANTS_FRAC = 0.654;
 
-/* 接触阴影布局（光来自左上 → 阴影偏右下） */
 const SH_SOFT = { dx: 0.10, dy: 0.05, sw: 1.35, sh: 0.42, op: 0.85 };
 const SH_CORE = { dx: 0.06, dy: 0.015, sw: 0.66, sh: 0.18, op: 0.95 };
 
 const depthScale = (x: number) => 0.92 + 0.14 * Math.sin(Math.PI * clamp01(x));
 const edgeFade = (x: number) =>
   Math.min(
-    THREE.MathUtils.smoothstep(x, 0.18, 0.24),
-    THREE.MathUtils.smoothstep(1 - x, 0.18, 0.24),
+    THREE.MathUtils.smoothstep(x, bp.fadeLo, bp.fadeHi),
+    THREE.MathUtils.smoothstep(1 - x, bp.fadeLo, bp.fadeHi),
   );
 
 type Spring = { value: number; velocity: number };
@@ -89,11 +86,23 @@ export function FruitSlider() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const softRefs = useRef<(HTMLDivElement | null)[]>([]);
   const coreRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const discoverRef = useRef<HTMLDivElement>(null);   // v6.10：悬停标签
   const [hovered, setHovered] = useState<Product | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const root = rootRef.current, canvas = canvasRef.current;
     if (!root || !canvas) return;
+
+    if (typeof document !== "undefined" && !document.querySelector('link[data-preconnect-gstatic]')) {
+      const l = document.createElement("link");
+      l.rel = "preconnect";
+      l.href = "https://www.gstatic.com";
+      l.crossOrigin = "";
+      l.setAttribute("data-preconnect-gstatic", "1");
+      document.head.appendChild(l);
+    }
+
     const wrap = root.querySelector<HTMLElement>("[data-fruit-slider-wrap]");
     if (!wrap) return;
     const plantLEl = root.querySelector<HTMLElement>(".fruit-slider__plant-left");
@@ -129,7 +138,7 @@ export function FruitSlider() {
       appear: Spring; lift: Spring;
       spin: number; speed: Spring;
       dwellStart: number; enterTime: number;
-      loaded: boolean;
+      loaded: boolean; revealAt: number;
       rect: { x: number; y: number; w: number; h: number };
       hovered: boolean;
       hBase: number; pose: number;
@@ -145,7 +154,7 @@ export function FruitSlider() {
         appear: newSpring(), lift: newSpring(),
         spin: 0, speed: newSpring(),
         dwellStart: -1, enterTime: -1,
-        loaded: false,
+        loaded: false, revealAt: -1,
         rect: { x: 0, y: 0, w: 0, h: 0 },
         hovered: false,
         hBase: SIZE_BY_SLUG[p.slug] ?? 1,
@@ -154,7 +163,6 @@ export function FruitSlider() {
     });
     fruits.forEach((f) => { f.lift.value = LIFT_PX; });
 
-    /* ---- 尺寸 / 相机 / 底图 cover 反解 ---- */
     let vw = 0, rootH = 0, N = 0, F = 0, j = 0, u = 0, h0 = 0;
     let imgW = 0, imgH = 0, dispW = 0, dispH = 0, offX = 0, offY = 0;
     let interacted = false;
@@ -162,14 +170,13 @@ export function FruitSlider() {
 
     const computeBg = () => {
       if (!imgW || !imgH || !vw || !rootH) return;
-      const s = Math.max(vw / imgW, rootH / imgH);   // cover
+      const s = Math.max(vw / imgW, rootH / imgH);
       dispW = imgW * s; dispH = imgH * s;
       offX = (vw - dispW) * 0.5;
       offY = (rootH - dispH) * (vw < MOBILE_BP ? BG_POS_Y_MOBILE : BG_POS_Y_DESKTOP);
       layoutPlants();
     };
 
-    /* 植物层：底图坐标 → 屏幕 px（与 cover 裁切同步） */
     function layoutPlants() {
       if (!dispW || !dispH) return;
       if (plantLEl) {
@@ -179,7 +186,6 @@ export function FruitSlider() {
         plantLEl.style.maxWidth = "none";
       }
       if (plantREl) {
-        /* 高度只取植物段 → 配合 object-fit:cover/top 裁掉自带木箱 */
         const fhPlants = PNG_RIGHT_PLANTS_FRAC * PNG_RIGHT_ASPECT * (dispW / dispH) * PLANT_RIGHT.fw;
         plantREl.style.left = `${(PLANT_RIGHT.fx * dispW + offX).toFixed(1)}px`;
         plantREl.style.top = `${(PLANT_RIGHT.fy * dispH + offY).toFixed(1)}px`;
@@ -187,13 +193,14 @@ export function FruitSlider() {
         plantREl.style.height = `${(fhPlants * dispH).toFixed(1)}px`;
         plantREl.style.maxWidth = "none";
       }
+      if (!root.classList.contains("is-plants-ready")) root.classList.add("is-plants-ready");
     }
 
     const bgImg = new Image();
     bgImg.onload = () => { imgW = bgImg.naturalWidth; imgH = bgImg.naturalHeight; computeBg(); };
+    bgImg.onerror = () => { imgW = 1600; imgH = 1000; computeBg(); };
     bgImg.src = "/assets/agrumea/hero-nature-bg.jpg";
 
-    /** 屏幕 x 比例 → 台座面落地线 y(px) */
     const stageY = (xScreenFrac: number) => {
       if (!dispH) return (0.70 + 0.04 * Math.pow(Math.sin(Math.PI * clamp01(xScreenFrac)), 1.2)) * rootH;
       const fx = (xScreenFrac * vw - offX) / dispW;
@@ -205,10 +212,11 @@ export function FruitSlider() {
     const measure = () => {
       vw = window.innerWidth; rootH = root.getBoundingClientRect().height;
       const xs = vw <= 480, sm = !xs && vw <= 1024;
-      N = vw * (xs ? 0.62 : sm ? 0.45 : 0.262);
+      bp = xs ? TRIO_BY_BP.xs : sm ? TRIO_BY_BP.sm : TRIO_BY_BP.md;
+      N = vw * bp.n;
       u = N * 0.42;
       F = D * N; j = 2 * N;
-      h0 = 2 * N + TRIO_LEFT * vw - u / 2;
+      h0 = 2 * N + bp.left * vw - u / 2;
       renderer.setSize(vw, rootH, false);
       camera.aspect = vw / rootH;
       const dist = (vw * PX2W) / (2 * Math.tan((FOV / 2) * (Math.PI / 180)) * camera.aspect);
@@ -231,13 +239,15 @@ export function FruitSlider() {
 
     const draco = new DRACOLoader();
     draco.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
+    draco.preload();
     const loader = new GLTFLoader();
     loader.setDRACOLoader(draco);
 
-    let readyCount = 0, revealAt = -1, destroyed = false;
+    let destroyed = false, loadedCount = 0;
 
     const loadModel = async (idx: number) => {
       const gltf = await loader.loadAsync(products[idx].model);
+      if (destroyed) return;
       const obj = gltf.scene;
       const box = new THREE.Box3().setFromObject(obj);
       const size = box.getSize(new THREE.Vector3());
@@ -256,21 +266,21 @@ export function FruitSlider() {
         }
       });
       fruits[idx].loaded = true;
-      /* 首果就绪 → 直接开始入场（不再等待 splash） */
-      if (++readyCount === 1) revealAt = performance.now() + ENTER_DELAY;
-      if (readyCount === D) root.classList.add("is-webgl");
+      fruits[idx].revealAt = performance.now() + ENTER_DELAY;
+      if (++loadedCount === D) root.classList.add("is-webgl");
     };
 
     (async () => {
-      for (let i = 0; i < D; i++) {
-        try { await loadModel(i); } catch (e) { console.warn(`glb ${products[i].slug} failed`, e); }
-      }
+      const first = Math.min(FIRST_SCREEN_COUNT, D);
+      await Promise.allSettled(products.slice(0, first).map((_, i) => loadModel(i)));
+      if (destroyed) return;
+      Promise.allSettled(products.slice(first).map((_, i) => loadModel(i + first)));
     })();
 
-    /* ---- 交互 ---- */
-    let dragging = false, dragId = -1, movedFar = false, suppressClick = false;
+    let dragging = false, dragId = -1, movedFar = false;
     let dragX = 0, downX = 0, dragVel = 0, dragTime = 0;
     let spinIdx = -1, spinLastX = 0, spinVel = 0;
+    let downHitIdx = -1;
     let pointerInside = false, mouseX = 0, mouseY = 0, hoverIdx = -1;
     let lastHoverSlug = "";
     let wheelTimer: ReturnType<typeof setTimeout> | undefined;
@@ -296,12 +306,12 @@ export function FruitSlider() {
     };
 
     const onDown = (e: PointerEvent) => {
-      suppressClick = false; movedFar = false; dragId = e.pointerId;
+      movedFar = false; dragId = e.pointerId;
       downX = e.clientX; dragX = e.clientX; dragVel = 0; spinVel = 0;
       dragTime = e.timeStamp || performance.now();
+      downHitIdx = hitTest(e.clientX, e.clientY);
       if (e.pointerType !== "mouse") {
-        const hit = hitTest(e.clientX, e.clientY);
-        if (hit >= 0) { spinIdx = hit; spinLastX = e.clientX; dragging = false; return; }
+        if (downHitIdx >= 0) { spinIdx = downHitIdx; spinLastX = e.clientX; dragging = false; return; }
       }
       dragging = true;
     };
@@ -311,7 +321,7 @@ export function FruitSlider() {
       const now = e.timeStamp || performance.now();
       if (spinIdx >= 0) {
         const dx = e.clientX - spinLastX; spinLastX = e.clientX;
-        if (Math.abs(e.clientX - downX) > 6) { movedFar = true; suppressClick = true; }
+        if (Math.abs(e.clientX - downX) > 6) movedFar = true;
         const a = fruits[spinIdx];
         a.spin += dx * TOUCH_SPIN_DEG;
         a.speed.value = 0; a.speed.velocity = 0;
@@ -323,7 +333,7 @@ export function FruitSlider() {
       if (!movedFar) {
         if (Math.abs(e.clientX - downX) <= 6) return;
         try { wrap.setPointerCapture(e.pointerId); } catch { return; }
-        movedFar = true; suppressClick = true; interacted = true;
+        movedFar = true; interacted = true;
         dragX = e.clientX; dragTime = now;
         return;
       }
@@ -335,24 +345,26 @@ export function FruitSlider() {
 
     const onUp = (e: PointerEvent) => {
       if (dragId === -1 || e.pointerId !== dragId) return;
+      const clickedIdx = downHitIdx;
+      const didMoveFar = movedFar;
       if (spinIdx >= 0) {
         const a = fruits[spinIdx];
         a.speed.value = clamp(spinVel, -240, 240); a.speed.velocity = 0;
         spinIdx = -1; spinVel = 0; dragId = -1; movedFar = false;
+        if (!didMoveFar && clickedIdx >= 0) router.push(`/dispensa/${products[clickedIdx].slug}`);
         return;
       }
-      if (movedFar) {
+      if (didMoveFar) {
         try { wrap.releasePointerCapture(e.pointerId); } catch { /* noop */ }
         target += clamp(dragVel, -FLING_CLAMP, FLING_CLAMP) * DRAG_SPEED * FLING_SPEED;
         snapToTrio();
+      } else if (clickedIdx >= 0 && fine.matches) {
+        router.push(`/dispensa/${products[clickedIdx].slug}`);
       }
       dragVel = 0; dragging = false; dragId = -1; movedFar = false;
     };
 
-    const onClick = (e: MouseEvent) => {
-      if (suppressClick) { e.preventDefault(); e.stopPropagation(); suppressClick = false; return; }
-      if (hoverIdx >= 0 && fine.matches) { e.preventDefault(); window.location.href = `/dispensa/${products[hoverIdx].slug}`; }
-    };
+    const onClick = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
     const onRootMove = (e: PointerEvent) => {
       if (e.pointerType === "touch") return;
@@ -406,11 +418,13 @@ export function FruitSlider() {
         setHovered(hoverIdx >= 0 ? products[hoverIdx] : null);
       }
 
-      const hBase = rootH * 0.32;
+      const hBase = rootH * (vw <= 480 ? 0.26 : 0.32);
+      /* v6.10：收集当前悬停水果的屏幕矩形，用于定位 Discover 标签 */
+      let hx = 0, hy = 0, hw = 0, hh = 0, hasHover = false;
+
       fruits.forEach((a, i) => {
         a.hovered = hoverIdx === i;
 
-        /* 悬停自转：停留 260ms 后慢转，移开回弹到 22.5° 网格 */
         const dwellOk = idleZone && a.hovered;
         if (!dwellOk) a.dwellStart = -1;
         else if (a.dwellStart < 0) a.dwellStart = now;
@@ -423,8 +437,7 @@ export function FruitSlider() {
           a.spin += (nearest - a.spin) * (1 - Math.exp(-REST_SNAP_K * dt));
         }
 
-        /* 入场 / 台上台下升降 */
-        stepSpring(a.appear, a.loaded && revealAt >= 0 ? 1 : 0, 80, dt);
+        stepSpring(a.appear, a.loaded && now >= a.revealAt ? 1 : 0, 80, dt);
 
         const q = posOf(i, H) / vw;
         const xFrac = clamp01(q);
@@ -438,6 +451,8 @@ export function FruitSlider() {
         const onStage = fade > 0.3 && a.loaded;
         stepSpring(a.lift, onStage ? 0 : LIFT_PX, 100, dt);
 
+        if (i === hoverIdx && onStage) { hx = a.rect.x; hy = a.rect.y; hw = a.rect.w; hh = a.rect.h; hasHover = true; }
+
         const g = a.group;
         g.visible = fade > 0.01 && a.loaded;
 
@@ -450,7 +465,6 @@ export function FruitSlider() {
         a.pivot.rotation.y = THREE.MathUtils.degToRad(a.spin);
         a.pivot.visible = a.appear.value > 0.02;
 
-        /* DOM 接触阴影：随落座同步显现，旋转时稳定不转 */
         const land = 1 - clamp01((a.lift.value + (1 - ap) * LIFT_PX) / LIFT_PX);
         const shOp = fade * ap * land;
         const softEl = softRefs.current[i];
@@ -468,6 +482,22 @@ export function FruitSlider() {
             `scale(${((w * SH_CORE.sw) / 120 * pop).toFixed(3)}, ${((w * SH_CORE.sh) / 30 * pop).toFixed(3)})`;
         }
       });
+
+      /* v6.10：把 Discover 标签贴到悬停水果外侧；近右缘翻到左侧；触屏/无悬停隐藏 */
+      const dk = discoverRef.current;
+      if (dk) {
+        if (hasHover && fine.matches) {
+          const flip = (hx + hw) > vw * 0.66;
+          const ax = flip ? hx - 10 : hx + hw + 10;
+          const ay = hy + hh * 0.42;
+          dk.style.transform =
+            `translate3d(${ax.toFixed(1)}px, ${ay.toFixed(1)}px, 0) translateY(-50%)` +
+            (flip ? " translateX(-100%)" : "");
+          dk.style.opacity = "1";
+        } else {
+          dk.style.opacity = "0";
+        }
+      }
 
       renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
@@ -511,7 +541,7 @@ export function FruitSlider() {
       });
       draco.dispose(); pmrem.dispose(); renderer.dispose();
     };
-  }, []);
+  }, [router]);
 
   const origin = hovered ? (hovered as Product & { origin?: string }).origin : undefined;
 
@@ -522,20 +552,15 @@ export function FruitSlider() {
       data-fruit-slider
       data-anim="hero"
     >
-      {/* 层 0：净版底图 */}
       <div className="fruit-slider__bg" aria-hidden="true" />
-      {/* 层 1：棕榈叶影（漂移循环） */}
       <div className="fruit-slider__palm-shadow" aria-hidden="true" />
-      {/* 层 2：植物（JS cover 映射定位 + 轻摆循环） */}
       <img className="fruit-slider__plant-left" src="/assets/agrumea/plant-left.png" alt="" aria-hidden="true" />
       <img className="fruit-slider__plant-right" src="/assets/agrumea/plant-right.png" alt="" aria-hidden="true" />
-      {/* 层 4：品牌字标（页面加载即淡入） */}
       <img
         className="fruit-slider__brand"
         src="/assets/agrumea/brand-wordmark.svg"
         alt="AGRUMEA Farm — Pure fruits, natural goodness, from our farm"
       />
-      {/* 接触阴影（multiply 印在台座） */}
       <div className="fruit-slider__shadows" aria-hidden="true">
         {products.map((p, i) => (
           <div key={`shadow-soft-${p.slug}`} className="fruit-shadow" ref={(el) => { softRefs.current[i] = el; }} />
@@ -544,9 +569,9 @@ export function FruitSlider() {
           <div key={`shadow-core-${p.slug}`} className="fruit-shadow fruit-shadow--core" ref={(el) => { coreRefs.current[i] = el; }} />
         ))}
       </div>
-      {/* 层 3：WebGL 水果 */}
       <canvas ref={canvasRef} className="fruit-slider__canvas" aria-hidden="true" />
-      {/* 层 6：悬停信息卡片 */}
+      {/* v6.10：悬停 Discover 标签（位置由帧循环 inline 写入） */}
+      <div className="fruit-discover" ref={discoverRef} aria-hidden="true">Discover the product</div>
       <div className={`fruit-info-card${hovered ? " is-visible" : ""}`} aria-live="polite">
         {hovered && (
           <>
@@ -557,7 +582,6 @@ export function FruitSlider() {
         )}
       </div>
       <p className="fruit-slider__prompt">Scroll to discover</p>
-      {/* 交互层 */}
       <div className="fruit-slider__wrapper" data-fruit-slider-wrap>
         <div className="fruit-slider__marquee">
           <div className="fruit-slider__track" data-fruit-slider-track>
@@ -570,6 +594,7 @@ export function FruitSlider() {
                 data-fruit-slider-item
                 data-fruit={p.image}
                 tabIndex={-1}
+                onClick={(e) => e.preventDefault()}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img

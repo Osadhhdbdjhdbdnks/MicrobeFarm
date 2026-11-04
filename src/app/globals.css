@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 /* ============================================================
-   Agrumea Farm — design tokens
+   Agrumea Farm — Design Tokens
    ============================================================ */
 :root {
   /* Brand palette */
@@ -205,7 +205,7 @@
   display: inline-block;
 }
 
-/* ---------- Hero fruit slider（基础 / 暗色舞台兼容） ---------- */
+/* ---------- Hero fruit slider (Base) ---------- */
 .fruit-slider {
   background: #532a26 url("/assets/agrumea/hero-stage-bg.jpg") center 68% / cover no-repeat;
   height: var(--app-height);
@@ -544,7 +544,7 @@ body:has(.fruit-slider) .site-header__brand img {
 .fruit-slider.is-boot .fruit-slider__item::after { display: none; }
 .fruit-slider.is-webgl .fruit-slider__marquee { transform: translate(-50%, -50%); }
 
-/* ---------- Light studio stage（旧浅色摄影底图，兼容保留） ---------- */
+/* ---------- Light studio stage (Legacy) ---------- */
 .fruit-slider--light {
   background:
     url("/assets/agrumea/hero-stage-light.jpg") center 62% / cover no-repeat,
@@ -599,7 +599,7 @@ body:has(.fruit-slider--light) .site-menu-toggle:hover .site-menu-toggle__pill {
 }
 body:has(.fruit-slider--light) .site-shell__legal { display: none; }
 
-/* ---------- 接触阴影（DOM multiply，恒印在台座上） ---------- */
+/* ---------- 接触阴影（DOM multiply） ---------- */
 .fruit-slider__shadows { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .fruit-shadow {
   position: absolute; left: 0; top: 0;
@@ -618,9 +618,7 @@ body:has(.fruit-slider--light) .site-shell__legal { display: none; }
 }
 
 /* ============================================================
-   v6.4 — Nature Stage 自然场景分层 + 环境循环动画（无 Splash）
-   （植物层 left/top/width 由 fruit-slider.tsx 的 layoutPlants()
-     按底图 cover 映射写入 inline，此处只写动画 / 裁切 / origin）
+   v6.4 — Nature Stage (Homepage)
    ============================================================ */
 .fruit-slider--nature {
   background: #f5ede3;
@@ -643,7 +641,7 @@ body:has(.fruit-slider--light) .site-shell__legal { display: none; }
   .fruit-slider__bg { background-position: center 70%; }
 }
 
-/* 层 1：棕榈叶影（8–15s 漂移循环） */
+/* 层 1：棕榈叶影 */
 .fruit-slider__palm-shadow {
   position: absolute;
   inset: -8% -4% 30% -4%;
@@ -660,13 +658,18 @@ body:has(.fruit-slider--light) .site-shell__legal { display: none; }
   100% { transform: translate3d(-0.8%, 1.4%, 0) rotate(-0.4deg); opacity: 0.48; }
 }
 
-/* 层 2：植物（定位由 JS inline 写入；右箱裁掉 PNG 自带木箱） */
+/* 层 2：植物 (防闪现门控) */
 .fruit-slider__plant-left,
 .fruit-slider__plant-right {
   position: absolute;
   z-index: 2;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-soft);
 }
+.fruit-slider.is-plants-ready .fruit-slider__plant-left,
+.fruit-slider.is-plants-ready .fruit-slider__plant-right { opacity: 1; }
+
 .fruit-slider__plant-left {
   transform-origin: 6% 3%;
   animation: plant-sway-left 6s ease-in-out infinite;
@@ -687,11 +690,10 @@ body:has(.fruit-slider--light) .site-shell__legal { display: none; }
   40%      { transform: rotate(-0.5deg); }
   80%      { transform: rotate(0.35deg); }
 }
-/* 底图已 baked 植物时：隐藏植物层 */
 .fruit-slider--nature.no-plant-layers .fruit-slider__plant-left,
 .fruit-slider--nature.no-plant-layers .fruit-slider__plant-right { display: none; }
 
-/* 层 4：品牌字标（页面加载即淡入） */
+/* 层 4：品牌字标 */
 .fruit-slider__brand {
   position: absolute;
   top: 5.5%;
@@ -712,7 +714,7 @@ body:has(.fruit-slider--light) .site-shell__legal { display: none; }
 .fruit-slider--nature .fruit-slider__canvas { z-index: 3; }
 .fruit-slider--nature .fruit-slider__wrapper { z-index: 5; }
 
-/* nature 场景隐藏站点 header 与旧 marquee / overlay */
+/* nature 场景隐藏站点 header */
 body:has(.fruit-slider--nature) .site-header,
 body:has(.fruit-slider--nature) .site-shell__legal { display: none; }
 .fruit-slider--nature .fruit-slider__marquee,
@@ -760,7 +762,7 @@ body:has(.fruit-slider--nature) .site-shell__legal { display: none; }
   margin: 0 auto;
 }
 
-/* 滚动提示（1.8s 后淡入 + 呼吸） */
+/* 滚动提示 */
 .fruit-slider--nature .fruit-slider__prompt {
   position: absolute;
   bottom: 26px;
@@ -785,8 +787,351 @@ body:has(.fruit-slider--nature) .site-shell__legal { display: none; }
   50%      { opacity: 0.95; transform: translateX(-50%) translateY(-3px); }
 }
 
-/* 移动端适配（植物定位走 JS，故此处不再覆盖 plant 尺寸） */
 @media (max-width: 767px) {
   .fruit-slider__brand { top: 4%; width: 62vw; }
   .fruit-info-card { bottom: 7%; }
 }
+
+/* ============================================================
+   v10 — Product Detail "Marmellata" (pdm)
+   · 修复哈密瓜截断：aspect-ratio 1/1.25，增加高度空间
+   · 滚动联动：放大+倾斜+上移
+   ============================================================ */
+body:has(.pdm) .site-header { color: var(--color-border-brand); }
+body:has(.pdm) .site-header__brand img { filter: none; }
+
+/* 尝试隐藏详情页 header 中可能残留的标语行 (如果是 HTML 文本) */
+body:has(.pdm) .site-header__brand p,
+body:has(.pdm) .site-header__tagline,
+body:has(.pdm) .site-header__wordmark-sub { 
+  display: none !important; 
+}
+
+.pdm { position: relative; background: var(--color-white); }
+
+/* ---- Hero ---- */
+.pdm__hero {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden; /* 仅隐藏超出视口部分，不裁切模型 */
+  padding-top: calc(var(--header-pad-y) * 2 + 48px);
+}
+.pdm__title {
+  margin: 4vh auto 0;
+  max-width: 1500px;
+  padding: 0 4vw;
+  text-align: center;
+  text-transform: uppercase;
+  text-wrap: balance;
+  font-family: var(--font-serif);
+  color: var(--color-orange);
+  font-size: clamp(3rem, 10.5vw, 9.5rem);
+  line-height: 0.98;
+  letter-spacing: 0.015em;
+}
+
+/* 核心修复：哈密瓜完整显示 */
+.pdm__media {
+  position: absolute;
+  left: 50%;
+  top: 60%; /* 稍微上调，给底部留空间 */
+  z-index: 2;
+  width: clamp(280px, 32vw, 520px);
+  aspect-ratio: 1 / 1.25; /* 增加高度比例，防止扁圆模型顶部被切 */
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  filter: drop-shadow(0 50px 60px rgba(90, 30, 15, 0.28));
+  /* 确保容器不会裁切内部 canvas */
+  overflow: visible; 
+}
+.pdm__media img,
+.pdm__media .pd-viewer {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.pdm__cat,
+.pdm__origin {
+  position: absolute;
+  bottom: 13%;
+  z-index: 1;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 2.4vw, 2.4rem);
+  line-height: 1.15;
+  color: var(--color-border-brand);
+}
+.pdm__cat { left: var(--container-padding); max-width: 20ch; }
+.pdm__origin { right: var(--container-padding); text-align: right; }
+
+/* ---- 故事段 ---- */
+.pdm__story {
+  padding: clamp(4rem, 9vw, 8rem) var(--container-padding) 0;
+  text-align: center;
+}
+.pdm__wordmark {
+  display: block;
+  width: clamp(160px, 14vw, 240px);
+  margin: 0 auto;
+}
+.pdm__wordmark-diamond {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 12px auto 0;
+  background: var(--color-border-brand);
+  transform: rotate(45deg);
+}
+.pdm__lead {
+  margin: clamp(2.5rem, 6vw, 4.5rem) auto 0;
+  max-width: 68ch;
+  font-size: clamp(1.35rem, 2.6vw, 2.2rem);
+  line-height: 1.35;
+  color: var(--color-border-brand);
+}
+.pdm__note {
+  margin: clamp(2rem, 5vw, 3.5rem) auto 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+  color: var(--color-border-brand);
+}
+.pdm__diamond {
+  display: block;
+  width: 12px;
+  height: 12px;
+  margin: clamp(2.5rem, 6vw, 4rem) auto;
+  background: var(--color-border-brand);
+  transform: rotate(45deg);
+}
+
+/* ---- 三栏信息 ---- */
+.pdm__grid {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 var(--container-padding) clamp(4rem, 9vw, 8rem);
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  border-top: 1px solid color-mix(in srgb, var(--color-border-brand) 25%, transparent);
+}
+.pdm__col { padding: 2.5rem 2rem 1rem 0; }
+.pdm__col + .pdm__col {
+  border-left: 1px solid color-mix(in srgb, var(--color-border-brand) 25%, transparent);
+  padding-left: 2rem;
+}
+.pdm__label {
+  margin: 0 0 1.1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-orange);
+}
+.pdm__text { margin: 0; color: var(--color-border-brand); font-size: 1.05rem; line-height: 1.55; }
+.pdm__weights { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.pdm__weight {
+  display: grid;
+  place-items: center;
+  min-width: 64px;
+  height: 64px;
+  padding: 0 10px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--color-border-brand) 35%, transparent);
+  color: var(--color-border-brand);
+  font-size: 0.95rem;
+}
+/* ---------- BUY FROM（dispensa 产品详情页） ---------- */
+.pdm__buy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pdm__buy-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: inherit;
+  transition: background-color .25s ease, color .25s ease, transform .25s ease;
+}
+
+.pdm__buy-link svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.pdm__buy-link:hover,
+.pdm__buy-link:focus-visible {
+  background: #7d1f2c;   /* 深酒红 */
+  color: #f7ede8;        /* 米白 */
+  transform: translateY(-2px);
+}
+
+/* 四栏分隔线（若 globals.css 里还没写，再补这段） */
+.pdm__grid { grid-template-columns: 1.5fr 1fr .9fr 1fr; }
+.pdm__col + .pdm__col { border-left: 1px solid rgba(125, 31, 44, .25); }
+@media (max-width: 720px) {
+  .pdm__grid { grid-template-columns: 1fr 1fr; }
+  .pdm__col:nth-child(3) { border-left: 0; }
+}
+.pdm__shelf { margin: 0; font-size: 1.35rem; color: var(--color-border-brand); }
+
+/* ---- 响应式 ---- */
+@media (max-width: 900px) {
+  .pdm__media { top: 55%; width: 62vw; aspect-ratio: 1 / 1.1; }
+  .pdm__cat { left: 5vw; bottom: 7%; }
+  .pdm__origin { right: 5vw; bottom: 7%; }
+  .pdm__grid { grid-template-columns: 1fr; }
+  .pdm__col { padding: 2rem 0 0; }
+  .pdm__col + .pdm__col {
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-border-brand) 25%, transparent);
+    padding-left: 0;
+    margin-top: 2rem;
+  }
+}
+
+/* ---------- Pantry 分类区块 ---------- */
+.pantry-category__head {
+  text-align: center;
+  padding: var(--space-s) var(--container-padding) 0;
+}
+.pantry-category__title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: var(--line-height-s);
+  color: var(--color-border-brand);
+  margin: 0 0 0.5rem;
+}
+.pantry-category__blurb {
+  color: var(--color-brown);
+  font-size: var(--text-medium);
+  max-width: 52ch;
+  margin: 0 auto;
+}
+.pantry-category__head + .pantry-grid { padding-top: var(--space-s); }
+
+/* ============================================================
+   v6.10 — 悬停 Discover 标签（白色胶囊 + 橙菱形 + 大写黑字）
+   位置/显隐由 fruit-slider.tsx 帧循环 inline 写入 transform/opacity
+   ============================================================ */
+.fruit-discover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1.15rem;
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-border-brand);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 12px 30px rgba(60, 20, 10, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease-soft);
+  will-change: transform, opacity;
+}
+.fruit-discover::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: var(--color-orange);
+  transform: rotate(45deg);
+}
+@media (max-width: 767px) {
+  /* 触屏不依赖 hover，标签由 JS 的 fine.matches 控制隐藏；此处再保险 */
+  .fruit-discover { display: none; }
+}
+
+/* ============================================================
+   v11 — 设计补全包：导航可见 / 首页段落 / 页脚 / 装饰
+============================================================ */
+
+/* 1) Header 配色：默认墨红；nature 首页锈红并恢复显示；菜单打开反白 */
+.site-header { color: var(--color-border-brand); }
+.site-header.is-menu-open { color: var(--color-white); }
+body:has(.fruit-slider--nature) .site-header { display: block; color: var(--color-rust); }
+body:has(.fruit-slider--nature) .site-shell__legal { display: block; mix-blend-mode: normal; }
+body:has(.fruit-slider--nature) .site-legal__link { color: var(--color-rust); }
+
+/* 2) 居中品牌区 + 缺失的装饰样式 */
+.site-header__center { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.header-decoration { display: flex; align-items: center; gap: 10px; margin-top: 7px; opacity: .85; }
+.deco-line { width: clamp(28px, 4vw, 56px); height: 1px; background: currentColor; opacity: .5; }
+.deco-leaf { width: 13px; height: 13px; opacity: .9; }
+.site-header__tagline { margin: .6rem 0 0; font-size: 10px; letter-spacing: .26em; text-transform: uppercase; opacity: .68; }
+
+/* 3) 菜单按钮 hover 适配浅色底 */
+.site-menu-toggle:hover .site-menu-toggle__pill { background: var(--color-border-brand); color: var(--color-white); }
+body:has(.fruit-slider--nature) .site-menu-toggle:hover .site-menu-toggle__pill { background: var(--color-rust); color: var(--color-white); }
+
+/* 4) hero 不再重复渲染 svg 字标（改由 header 承担，避免双字标） */
+.fruit-slider--nature .fruit-slider__brand { display: none; }
+
+/* 5) 首页词带 marquee */
+.home-marquee { overflow: hidden; border-block: 1px solid var(--border); background: var(--color-cream-dark); padding: .9rem 0; }
+.home-marquee__track { display: flex; width: max-content; animation: marquee-x 28s linear infinite; }
+.home-marquee__group { display: flex; }
+.home-marquee__item { display: inline-flex; align-items: center; gap: 2.5rem; padding-right: 2.5rem; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--color-brown); white-space: nowrap; }
+.home-marquee__diamond { width: 6px; height: 6px; background: var(--color-orange); transform: rotate(45deg); }
+@keyframes marquee-x { to { transform: translateX(-50%); } }
+
+/* 6) 首页段落通用 */
+.home-section-head { text-align: center; padding: 0 var(--container-padding); margin-bottom: clamp(2rem, 5vw, 3.5rem); }
+.home-section-title { font-family: var(--font-serif); font-size: clamp(2rem, 4.5vw, 3.6rem); line-height: 1.05; color: var(--color-border-brand); margin: 0; text-wrap: balance; }
+.story-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: var(--space-l); }
+
+/* 分类卡片 */
+.home-categories { padding: clamp(4rem, 9vw, 8rem) 0 0; }
+.home-categories__grid { max-width: 1400px; margin: 0 auto; padding: 0 var(--container-padding); display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap-x); }
+.home-category { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: .65rem; padding: 2rem 1.75rem 2.25rem; border: 1px solid var(--border); border-radius: var(--border-round); background: var(--color-white); color: inherit; text-decoration: none; transition: transform .35s var(--ease-soft), box-shadow .35s var(--ease-soft), border-color .35s var(--ease-soft); }
+.home-category:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--color-orange) 45%, transparent); box-shadow: 0 24px 48px color-mix(in srgb, var(--color-border-brand) 12%, transparent); }
+.home-category__index { font-family: var(--font-serif); font-style: italic; color: var(--color-orange); letter-spacing: .08em; }
+.home-category__label { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.6vw, 2.2rem); line-height: 1.1; margin: 0; color: var(--color-border-brand); }
+.home-category__blurb { margin: 0; color: var(--color-brown); font-size: var(--text-small); line-height: 1.55; }
+.home-category__count { margin-top: auto; padding-top: 1.25rem; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--color-orange); }
+.home-category::after { content: ""; position: absolute; right: -30px; bottom: -30px; width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--color-yellow) 22%, transparent), transparent 70%); opacity: 0; transition: opacity .35s var(--ease-soft); }
+.home-category:hover::after { opacity: 1; }
+@media (max-width: 900px) { .home-categories__grid { grid-template-columns: 1fr; } }
+
+/* 当季主打 */
+.home-featured { padding: clamp(4rem, 9vw, 8rem) 0 0; }
+.home-featured__grid { padding-bottom: 0; }
+.home-featured__cta { display: flex; justify-content: center; padding-top: clamp(2rem, 4vw, 3rem); }
+
+/* Experience banner 内文居中收尾 */
+.experience-banner .story-text { margin: 0 auto 2rem; max-width: 52ch; }
+
+/* 7) 页脚 */
+.site-footer { background: var(--color-border-brand); color: var(--color-white); padding: clamp(3rem, 6vw, 5rem) var(--container-padding) 2rem; }
+.site-footer__inner { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: clamp(2rem, 4vw, 4rem); }
+.site-footer__wordmark { color: var(--color-white); }
+.site-footer__tag { margin: 1rem 0 0; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; opacity: .65; }
+.site-footer__head { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--color-yellow); margin: 0 0 1rem; }
+.site-footer__nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.site-footer__nav a { color: inherit; text-decoration: none; opacity: .8; transition: opacity .25s, color .25s; }
+.site-footer__nav a:hover { opacity: 1; color: var(--color-yellow); }
+.site-footer__contact p { margin: 0 0 .35rem; opacity: .8; font-size: var(--text-small); }
+.site-footer__legal { max-width: 1400px; margin: clamp(2.5rem, 5vw, 4rem) auto 0; padding-top: 1.25rem; border-top: 1px solid color-mix(in srgb, var(--color-white) 18%, transparent); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; font-size: 12px; opacity: .7; }
+.site-footer__legal-links { display: flex; gap: 1.25rem; }
+.site-footer__legal-links a { color: inherit; text-decoration: none; }
+.site-footer__legal-links a:hover { text-decoration: underline; }
+@media (max-width: 900px) { .site-footer__inner { grid-template-columns: 1fr; } }
+
+/* 8) 锚点跳转避开固定 header */
+.pantry-category { scroll-margin-top: 140px; }

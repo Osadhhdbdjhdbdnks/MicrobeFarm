@@ -1,34 +1,42 @@
+import type { Metadata } from "next";
 import { categories, productsByCategory } from "@/data/products";
 import { ProductCard } from "@/components/product-card";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sicilian jams, pestos and preserves | Agrumea Farm",
+  title: "Pantry | Microbe Farm",
   description:
-    "Explore the Agrumea Farm pantry: Sicilian artisanal marmalades, jams, spreadable creams, pestos and savoury preserves.",
+    "Browse the Microbe Farm pantry: fresh fruit, tropical goodness and savoury produce, grouped by category.",
 };
 
 export default function PantryPage() {
   return (
     <>
       <section className="pantry-hero">
-        <h1 className="pantry-hero__title">Pantry</h1>
-        <p className="pantry-hero__lead">Our land, one fruit at a time.</p>
+        <p className="story-kicker">Pantry</p>
+        <h1 className="pantry-hero__title">The harvest, shelved.</h1>
+        <p className="pantry-hero__lead">
+          Every fruit begins in our orchards. Browse the pantry by category and
+          discover the flavour of Sicily at its source.
+        </p>
       </section>
 
-      {categories.map((c) => (
-        <section key={c.key} className="story-section">
-          <p className="story-kicker">{c.title}</p>
-          <h2 className="story-title">{c.title}</h2>
-          <p className="story-text">{c.blurb}</p>
-
-          <div className="pantry-grid pantry-grid--flush">
-            {productsByCategory(c.key).map((p) => (
-              <ProductCard key={p.slug} product={p} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {categories.map((c) => {
+        const items = productsByCategory[c.slug] ?? [];
+        if (!items.length) return null;
+        return (
+          <section key={c.slug} className="pantry-category">
+            <header className="pantry-category__head">
+              <h2 className="pantry-category__title">{c.label}</h2>
+              <p className="pantry-category__blurb">{c.blurb}</p>
+            </header>
+            <div className="pantry-grid">
+              {items.map((p) => (
+                <ProductCard key={p.slug} product={p} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </>
   );
 }
