@@ -93,6 +93,8 @@ export function FruitSlider() {
   useEffect(() => {
     const root = rootRef.current, canvas = canvasRef.current;
     if (!root || !canvas) return;
+    // Keep a narrowed reference for use inside nested closures.
+    const rootEl: HTMLElement = root;
 
     if (typeof document !== "undefined" && !document.querySelector('link[data-preconnect-gstatic]')) {
       const l = document.createElement("link");
@@ -193,7 +195,7 @@ export function FruitSlider() {
         plantREl.style.height = `${(fhPlants * dispH).toFixed(1)}px`;
         plantREl.style.maxWidth = "none";
       }
-      if (!root.classList.contains("is-plants-ready")) root.classList.add("is-plants-ready");
+      if (!rootEl.classList.contains("is-plants-ready")) rootEl.classList.add("is-plants-ready");
     }
 
     const bgImg = new Image();
@@ -210,6 +212,7 @@ export function FruitSlider() {
     };
 
     const measure = () => {
+      if (!root) return; //
       vw = window.innerWidth; rootH = root.getBoundingClientRect().height;
       const xs = vw <= 480, sm = !xs && vw <= 1024;
       bp = xs ? TRIO_BY_BP.xs : sm ? TRIO_BY_BP.sm : TRIO_BY_BP.md;
@@ -332,7 +335,7 @@ export function FruitSlider() {
       if (!dragging) return;
       if (!movedFar) {
         if (Math.abs(e.clientX - downX) <= 6) return;
-        try { wrap.setPointerCapture(e.pointerId); } catch { return; }
+        try { wrap?.setPointerCapture(e.pointerId); } catch { return; }
         movedFar = true; interacted = true;
         dragX = e.clientX; dragTime = now;
         return;
@@ -367,6 +370,7 @@ export function FruitSlider() {
     const onClick = (e: MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
 
     const onRootMove = (e: PointerEvent) => {
+      if (!root) return;
       if (e.pointerType === "touch") return;
       pointerInside = true;
       const r = root.getBoundingClientRect();
