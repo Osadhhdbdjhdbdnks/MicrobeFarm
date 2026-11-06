@@ -1133,5 +1133,30 @@ body:has(.fruit-slider--nature) .site-menu-toggle:hover .site-menu-toggle__pill 
 .site-footer__legal-links a:hover { text-decoration: underline; }
 @media (max-width: 900px) { .site-footer__inner { grid-template-columns: 1fr; } }
 
+/* ============================================================
+   v15 — 跨设备一致：header 字标语单行不换行（消除窄条换行）
+   ============================================================ */
+.site-header__brand { width: auto; }
+.site-header__wordmark { align-items: center; text-align: center; }
+.site-header__wordmark p,
+.site-header__wordmark > *:last-child,
+.site-header__tagline {
+  white-space: nowrap;
+  font-size: clamp(8px, 1.5vw, 11px);
+  letter-spacing: 0.24em;
+}
+@media (max-width: 480px) {
+  .site-header__wordmark p,
+  .site-header__wordmark > *:last-child,
+  .site-header__tagline {
+    font-size: 8px;
+    letter-spacing: 0.16em;
+  }
+}
+/* 手机植物由 JS 视口定位；确保不被旧 CSS 的 object-fit 裁掉木箱 */
+@media (max-width: 767px) {
+  .fruit-slider__plant-right { object-fit: fill; }
+}
+
 /* 8) 锚点跳转避开固定 header */
 .pantry-category { scroll-margin-top: 140px; }
